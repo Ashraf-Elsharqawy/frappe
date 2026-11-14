@@ -77,7 +77,10 @@ frappe.ui.form.ControlMultiSelectList = class ControlMultiSelectList extends (
 			"input",
 			"input",
 			frappe.utils.debounce((e) => {
+				let search = (this._search_request = (this._search_request || 0) + 1);
 				this.set_options().then(() => {
+					// a later search is on its way: do not draw this one's options under it
+					if (search !== this._search_request) return;
 					let txt = e.target.value;
 					// get_data(txt) already searched on the server for txt, possibly on a field
 					// the option does not show (e.g. an Item found by its barcode): keep what it
@@ -273,10 +276,13 @@ frappe.ui.form.ControlMultiSelectList = class ControlMultiSelectList extends (
 		if (this.df.get_data) {
 			let txt = this.$filter_input.val();
 			let value = this.df.get_data(txt);
+			// Answers can arrive out of order: only the latest request may set the options.
+			let request = (this._options_request = (this._options_request || 0) + 1);
 			if (!value) {
 				this._options = [];
 			} else if (value.then) {
 				promise = value.then((options) => {
+					if (request !== this._options_request) return;
 					this._options = this.process_options(options);
 				});
 			} else {
